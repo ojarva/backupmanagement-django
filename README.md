@@ -1,24 +1,21 @@
 What
 ====
 
-This is backup management software used by Futurice. Basic idea is to 
-empower employees to manage their own backup disks (virtual disks in 
-LVM). System sets up separate user account and password for backups. 
+This is backup management software used by Futurice. Every employee can create
+personal backup disk (virtual disk in LVM) using this website. System sets up separate user account and password for backups. 
 Idea is to separate backups from normal user passwords.
 
 Prerequisities
 --------------
 
 * Backup storage in LVM disk (/dev/backupdisks in our setup)
-* ext4 (or btrfs, may not work. Futurice currently uses ext4)
+* ext4 (or btrfs, may not work. We use ext4 at Futurice)
 * ACLs enabled (usually it's)
 * Django installed (>= 1.3.1)
 * django_compressor
-* Web server with authentication (Futurice uses single sign-on, but for 
-  example basic auth is fine). Preferrably https as password is highly 
-  confidential.
-* Samba (for Windows backups, see also INSTALL.samba.txt)
-* netatalk (for AFP support, see also INSTALL.afp.txt)
+* Web server with authentication (We use single sign-on at Futurice, but for example basic auth is fine). Preferrably https as the password is rather sensitive information.
+* Samba (for Windows backups, see also INSTALL.samba.md)
+* netatalk (for AFP support, see also INSTALL.afp.md)
 * rrdtool
 
 Copy-paste for installing packages:
