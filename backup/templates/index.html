@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<script type="text/javascript">
+$(document).ready(function(){
+ {% if not mounted %}
+ $("#mount_disk").bind('click', function() {
+  $.ajax({
+   type: "POST",
+   url: "{% url mount %}",
+   success: function(data) {
+    if (data.success) {
+     location.reload();
+    }
+   },
+   dataType: "json"
+  });
+ });
+ {% else %}
+  $("#run_fsck").bind('click', function() {
+   $.ajax({
+    type: "POST",
+    url: "{% url fsck %}",
+    success: function(data) {
+     $("#fsck").html("<pre>"+data.status+"</pre>");
+    },
+    dataType: "json"
+   });
+  });
+  $("#run_defragment").bind('click', function() {
+   $.ajax({
+    type: "POST",
+    url: "{% url defragment %}",
+    success: function(data) {
+     if (data.success) {
+      $("#defragment").html("Successfully defragmented filesystem");
+     }
+    },
+    dataType: "json"
+   });
+  });
+
+ {% endif %}
+ $(".gallery a").lightBox();
+});
+</script>
+<div class="page-header">
+<h1>Status</h1>
+</div>
+
+
+{% if disk.mounted %}
+Used disk space: <span class="badge badge-info">{{ disk.used|filesizeformat }} out of {{ disk.size|filesizeformat }} in use</span> <span class="gallery"><a href="{% url userspace_image %}">History</a></span></li>
+<div class="progress progress-danger">
+  <div class="bar"style="width: {{ disk.usepercent }}%;"></div>
+</div>
+
+{% else %}
+Disk size: <span class="badge">Disk size: {{disk.size|filesizeformat}}</span> - Disk is <span class="badge badge-important">not mounted</span> - <span class="btn btn-mini" id="mount_disk" class="ajaxlink">Mount</span>
+
+{% endif %} 
+
+<h2 style="padding-top:1em; padding-bottom:0.5em">Operations</h2>
+<div class="row">
+
+<div class="span3">
+	 I don't remember my password. Doesn't affect old backups in any way.
+	<br>
+	<a class="btn btn-primary btn-small" href="{% url change_password %}">Generate new password</a>
+</div>
+<div class="span3">
+	My disk is full / backup software requires more space.
+	<br>
+	<a class="btn btn-primary btn-small" href="{% url add_space %}">Add more space</a>
+</div>
+<div class="span3">
+	I don't use it anymore. You can't undo this operation.
+	<br> 
+	<a class="btn btn-danger btn-small" href="{% url delete_disk %}">Delete my disk</a>
+</div>
+<div class="span3">
+	My Time Machine is not working / it complains that disk is too small. Requires reconfiguring Time Machine on your computer.
+	<br> 
+	<a class="btn btn-danger btn-small" href="{% url delete_timemachine %}">Delete Time Machine backups</a>
+</div>
+
+</div>
+
+<h2 style="padding-top:1em; padding-bottom: 0.5em">Instructions</h2>
+
+<div class="row">
+<div class="span3">
+<p>User backup service is available only from LAN/VPN. Neither samba or AFP can encrypt traffic reliably in all cases, so we are not supporting backups over the internet without VPN.</p>
+</div>
+
+<div class="span3">
+<h4>Windows</h4>
+<p>We recommend using Windows backup program (Windows 7 or newer)</p>
+<p><b>\\{{ hostname }}\{{user.username}}</b></p>
+</div>
+
+<div class="span3">
+<h4>Mac OS X</h4>
+<p>Time Machine works fine - just remember to convert away from Legacy FileVault (before Lion).</p>
+<p><b>afp://{{ hostname }}\{{user.username}}</b></p>
+</div>
+
+<div class="span3">
+<h4>Linux</h4>
+<p>Basically, you're on your own for choosing best backup software. For Ubuntu, DejaDup is relatively good.</p>
+<p><b>\\{{ hostname }}\{{user.username}}</b> (using Samba)</p>
+</div>
+
+</div>
+
+<h2>Your backups</h2>
+
+<div class="row">
+<div class="span12">
+<table class="table table-striped">
+	<thead>
+	<tr>
+		<th>Machine</th>
+		<th>Format</th>
+		<th>Age</th>
+	</tr>
+	</thead>
+	<tbody>
+	{% for backup in backupinfo %}
+	<tr>
+		<td>{{ backup.machine }}</td>
+		<td>{{ backup.format }}</td>
+		<td>{{ backup.get_age }} ago</td>
+	</tr>
+	{% empty %}
+	<tr>
+		<td colspan="3"><center><b>No backups found</b></center></td>
+	{% endfor %}
+	</tbody>
+</table>
+
+{% if backup_stacktrace %}
+	<pre>{{ backup_stacktrace }}</pre>
+{% endif %}
+
+</div></div>
+
+<h2>Random trivia</h2>
+
+<div class="row">
+<div class="span12">
+<ul>
+	{% if disk.mounted %}<li>{{ disk.inodes_used }} inodes out of {{ disk.inodes }} in use</li>{% endif %}
+	<li>Items in IO wait queue: {{ disk.iowait }} (all disks). <span class="gallery"><a href="{{ STATIC_URL }}/waittime.png">History</a></span></li>
+	<li>Bytes read (total/yours): {{ disk.totalbytes_read|filesizeformat }}/{{ disk.yourbytes_read|filesizeformat}}. <span class="gallery"><a href="{{ STATIC_URL }}/read.png">History</a></span></li>
+	<li>Bytes written (total/yours): {{ disk.totalbytes_written|filesizeformat }}/{{ disk.yourbytes_written|filesizeformat}}. <span class="gallery"><a href="{{ STATIC_URL }}/write.png">History</a></span></li>
+</ul>
+</div></div>
+
+
+{% endblock %}

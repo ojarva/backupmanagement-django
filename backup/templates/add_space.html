@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if added %}
+<h1>25GB of space added successfully.</h1>
+
+<p>Go to <a href="{% url indexview %}">front page</a>.</p>
+
+{% else %}
+<script type="text/javascript">
+ $(document).ready(function() {
+   $('form').submit(function(){ 
+     $('input[type=submit]', this).attr('disabled', 'disabled');  
+   });
+ });
+</script>
+
+<h1>Add More Space</h1>
+
+<p>You are about to add more space to your back disk. Do not add more space if you don't need it. Also consider removing unnecessary files or backups.</p>
+<p class="well">This takes some time (&gt;10s), please be patient.</p>
+
+<form method="post" action="?">{% csrf_token %} 
+<table>
+	{{ form }}
+	<tr>
+		<th></th>
+		<td><input type="submit" class="btn btn-primary" value="Add it!"></td>
+	</tr>
+</table>
+</form>
+
+<p>If you don't need more space, go <a href="{% url indexview %}">back to front page</a>.</p>
+{% endif %}
+
+{% endblock %}

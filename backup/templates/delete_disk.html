@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if umount_failed %}
+
+<div class="alert alert-error alert-block">
+<h4 class="alert-heading>An error occured</h4>
+Disconnecting the disk failed. Please disconnect your computer from backup disk before deleting the disk.
+
+</div>
+{% endif %}
+
+<h1>Delete your disk</h1>
+
+<p>This operation deletes your backup disk permanentently. All backup data is lost, and can't be recovered.</p>
+<p>Are you absolutely sure you want to do this?</p>
+
+<p><form method="post" class="form-horizontal" action="?">{% csrf_token %} 
+<table>
+	{{ form }}
+	<tr>
+		<th></th>
+		<td><input type="submit" class="btn btn-danger" value="Delete it!"></td>
+	</tr>
+</table>
+</form></p>
+
+<p>If not, go back to <a href="{% url indexview %}">front page</a>.</p>
+
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script type="text/javascript">
+ $(document).ready(function() {
+   $('form').submit(function(){ 
+     $('input[type=submit]', this).attr('disabled', 'disabled');  
+   });
+ });
+</script>
+
+<div class="hero-unit">
+<h1>Personal backups made easy</h1>
+
+<p>In this service you can create your personal backup space to our network storage. Backing up your computer is just few clicks away.</p>
+
+</div>
+
+<div class="row">
+	<div class="span4">
+		<h2>First</h2>
+		<p>Create backup storage here. This storage is strictly for backups - it's not backed up in any way.</p>
+	</div>
+
+	<div class="span4">
+		<h2>Then</h2>
+		<p>Configure your computer to take backups. We recommend Time Machine for Mac OS X, LBackup for Linux and something else for Windows. For Windows 7, built-in Windows Backup works fine.</p>
+	</div>
+
+	<div class="span4">
+		<h2>Finally</h2>
+		<p>Come back in week or two and validate backups still works. At first, you get {{ default_disk_size }}GB of storage. If you are running low, you can always add more using this website.</p>
+	</div>
+</div>
+
+<div class="row" style="padding-top:2em">
+	<div class="span4 offset8">
+		<p>This operation takes some time (&gt;10s). Please be patient and wait.</p>
+		<form method="post" action="?">
+			{% csrf_token %} <input type="submit" class="btn btn-primary btn-large" value="Create">
+		</form>
+	</div>
+</div>
+
+{% endblock %}

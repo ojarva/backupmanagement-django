@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if delete_failed %}
+
+<div class="alert alert-block alert-error">
+<h4 class="alert-heading">An error occured</h4>
+Deleting Time Machine backup failed.
+</div>
+{% endif %}
+
+<h1>Delete your Time Machine backup disk</h1>
+
+<p>This operation deletes your Time Machine backup permanently. You probably want to do this if Mac OS X complains that your disk is too small / full, even though you added more space.
+It looks like Time Machine can't resize it's proprietary disk format.</p>
+
+<p>Are you absolutely sure you want to do this?</p>
+
+<p><form method="post" action="?">{% csrf_token %} 
+<table>
+	{{ form }}
+	<tr>
+		<th></th>
+		<td><input type="submit" class="btn btn-danger" value="Delete it!"></td>
+	</tr>
+</table>
+</form></p>
+
+<p>If not, go back to <a href="{% url indexview %}">front page</a>.</p>
+{% endblock %}
