@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-
+{% load compress %}
 {% block content %}
-
+{% compress js inline %}
 <script type="text/javascript">
 $(document).ready(function(){
  {% if not mounted %}
@@ -45,6 +45,8 @@ $(document).ready(function(){
  $(".gallery a").lightBox();
 });
 </script>
+{% endcompress %}
+
 <div class="page-header">
 <h1>Status</h1>
 </div>

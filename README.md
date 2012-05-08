@@ -13,6 +13,7 @@ Prerequisities
 * ext4 (or btrfs, may not work. Futurice currently uses ext4)
 * ACLs enabled (usually it's)
 * Django installed (>= 1.3.1)
+* django_compressor
 * Web server with authentication (Futurice uses single sign-on, but for 
   example basic auth is fine). Preferrably https as password is highly 
   confidential.
@@ -24,6 +25,7 @@ Copy-paste for installing packages:
 
 ```
 apt-get install e2fslibs e2fsprogs apache2 libapache2-mod-fastcgi python-flup samba rrdtool python-django
+pip install django_compressor
 ```
 
 * netatalk installation

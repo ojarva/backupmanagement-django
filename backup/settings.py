@@ -4,6 +4,7 @@ import socket
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
+COMPRESS_ENABLED = True
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -77,7 +78,7 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'compressor.finders.CompressorFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -119,6 +120,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'backup.management',
+    "compressor",
 )
 
 # A sample logging configuration. The only tangible logging

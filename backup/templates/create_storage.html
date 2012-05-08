@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-
+{% load compress %}
 {% block content %}
+{% compress js inline %}
 <script type="text/javascript">
  $(document).ready(function() {
    $('form').submit(function(){ 
@@ -8,7 +9,7 @@
    });
  });
 </script>
-
+{% endcompress %}
 <div class="hero-unit">
 <h1>Personal backups made easy</h1>
 
