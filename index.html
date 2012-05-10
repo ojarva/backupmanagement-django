@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Backup management (Django) by ojarva</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Backup management (Django)</h1>
+        <p>Interface for managing personal backup spaces</p>
+        <p class="view"><a href="https://github.com/ojarva/backupmanagement-django">View the Project on GitHub <small>ojarva/backupmanagement-django</small></a></p>
+        <ul>
+          <li><a href="https://github.com/ojarva/backupmanagement-django/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/ojarva/backupmanagement-django/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/ojarva/backupmanagement-django">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>What</h1>
+
+<p>This is backup management software used by Futurice. Every employee can create
+personal backup disk (virtual disk in LVM) using this website. System sets up separate user account and password for backups. 
+Idea is to separate backups from normal user passwords.</p>
+
+<h2>Prerequisities</h2>
+
+<ul>
+<li>Backup storage in LVM volume (/dev/backupdisks in our setup)</li>
+<li>ext4 (or btrfs, may not work. We use ext4 at Futurice)</li>
+<li>ACLs enabled</li>
+<li>Django installed (&gt;= 1.4)</li>
+<li>django_compressor (at least version 1.2a1 works, most probably others too)</li>
+<li>yui-compressor</li>
+<li>Web server with authentication (We use single sign-on at Futurice, but for example basic auth is fine). Preferrably https as the password is rather sensitive information.</li>
+<li>Samba (for Windows backups, see also INSTALL.samba.md)</li>
+<li>netatalk (for AFP support, see also INSTALL.afp.md)</li>
+<li>rrdtool</li>
+</ul><p>Copy-paste for installing packages:</p>
+
+<pre><code>apt-get install e2fslibs e2fsprogs apache2 libapache2-mod-fastcgi python-flup samba rrdtool python-django yui-compressor
+pip install django_compressor
+</code></pre>
+
+<ul>
+<li>netatalk installation</li>
+<li>samba configuration</li>
+<li>LVM configuration</li>
+</ul><h2>Quick installation</h2>
+
+<ol>
+<li>Install prerequisities</li>
+<li>add "backupmanagement" user</li>
+<li>checkout code to /home/backupmanagement/</li>
+<li>add sudoers entry (see below) and configure wrappers</li>
+<li>Check values in backup/settings.py (at least LVM_ROOT and DIRECTORIES_ROOT)</li>
+<li>In directory backup/ run "python manage.py check_prerequisities". Fix possible problems.</li>
+<li>run "python manage.py syncdb"</li>
+<li>run "python manage.py collectstatic; python manage.py compress --force"</li>
+<li>start fastcgi server: "sudo -u backupmanagement -i; cd backup; ./bin/start.sh"</li>
+<li>configure apache2</li>
+<li>add crontab entries (see below)</li>
+</ol><h2>Notes</h2>
+
+<p>We recommend using FastCGI for better privilege separation. You should never run this application
+under web server user. This application requires quite many sudo permissions, and it's bad idea
+to grant those to web server (and every application running under it).</p>
+
+<h2>Crontab entries in our configuration</h2>
+
+<p>This is optional. Without crontab entries, no history graphs will be generated. Also, 
+<em><a href="https://github.com/reboot" class="user-mention">@reboot</a></em> line starts FastCGI application after reboot - if you skip that, it might be good
+idea to write short init script instead (or use <em>rc.local</em>, depending on your distribution).</p>
+
+<p>Add to backupmanagement user crontab:</p>
+
+<pre><code>sudo -u backupmanagement crontab -e
+</code></pre>
+
+<p>following lines:</p>
+
+<pre><code>@reboot /home/backupmanagement/backup/bin/start.sh # starts fastcgi server on reboot.
+* * * * * cd /home/backupmanagement/backup; python manage.py rrd_waittime
+*/5 * * * * cd /home/backupmanagement/backup; python manage.py update_df_stats
+</code></pre>
+
+<h2>Example apache configuration</h2>
+
+<ul>
+<li>enable ssl</li>
+<li>enable whatever authentication, for example basic auth. Alternatively, you can modify Django application to use built-in user database.</li>
+</ul><pre><code>RewriteEngine on
+FastCGIExternalServer /var/www/backup.fcgi -socket /home/backupmanagement/backup/backup.sock
+
+RewriteRule ^/backup/static/(.*)$ /home/backupmanagement/backup/static/$1 [L]
+RewriteRule ^/backup/(.*)$ /backup.fcgi/$1 [QSA,L]
+</code></pre>
+
+<h2>Configuring sudo rights and sudo wrappers</h2>
+
+<p>IMPORTANT: If wrappers directory is inside a directory owned by 
+user running Django application, compromised account leads to total compromise of the system.
+Steps to protect against this:</p>
+
+<pre><code>mkdir -p /opt/backupmanagement
+cp -R /home/backupmanagement/wrappers /opt/backupmanagement/wrappers/
+chown -R root:root /opt/backupmanagement 
+chmod -R 700 /opt/backupmanagement/*
+</code></pre>
+
+<p>Add this line to sudoers (<em>sudo visudo</em>):</p>
+
+<pre><code>backupmanagement ALL=NOPASSWD: /opt/backupmanagement/wrappers/chmod.py, /opt/backupmanagement/wrappers/chown.py, /opt/backupmanagement/wrappers/chpasswd.py, /opt/backupmanagement/wrappers/defragment-btrfs.py, /opt/backupmanagement/wrappers/deluser.py, /opt/backupmanagement/wrappers/df.py, /opt/backupmanagement/wrappers/dmsetup.py, /opt/backupmanagement/wrappers/fetch_backups.py, /opt/backupmanagement/wrappers/lvcreate.py, /opt/backupmanagement/wrappers/lvdisplay.py, /opt/backupmanagement/wrappers/lvextend.py, /opt/backupmanagement/wrappers/lvremove.py, /opt/backupmanagement/wrappers/mkdir.py, /opt/backupmanagement/wrappers/mkfs-ext4.py, /opt/backupmanagement/wrappers/mount.py, /opt/backupmanagement/wrappers/resize2fs.py, /opt/backupmanagement/wrappers/rmdir.py, /opt/backupmanagement/wrappers/rm-timemachine.py, /opt/backupmanagement/wrappers/setfacl.py, /opt/backupmanagement/wrappers/smbpasswd.py, /opt/backupmanagement/wrappers/umount.py, /opt/backupmanagement/wrappers/useradd.py
+</code></pre>
+
+<p>Also, check that <em>env_reset</em> is enabled in sudoers configuration (usually it's on by 
+default).</p>
+
+<p>All sudo commands go through python wrappers. That way backupmanagement 
+user can only run specific commands with safe arguments. For example, 
+compromised user can only delete backups, not random files from OS. It 
+can't change root password or add new user with uid/gid 0 etc. 
+Unfortunately, attacker with access to backupmanagement user can change 
+other users passwords and access backup files. Preventing this while still 
+allowing automatic configuration is not possible.</p>
+
+<p>You may want to add administrators (basically everyone with additional
+sudo rights) to wrappers/wrappers_settings.py file to prevent changes
+to admin passwords and/or files. If you change this file, be sure to copy
+it to <em>/opt/backupmanagement/wrappers</em> (or any other directory you are using
+for sudo wrappers).</p>
+
+<h2>TODO</h2>
+
+<p>Will do some day:</p>
+
+<ul>
+<li>better error handling (now just throws traceback to user)</li>
+<li>tested btrfs support</li>
+</ul><h2>Our setup</h2>
+
+<p>All employees can create their own backup spaces. Our setup currently 
+supports Windows backups over samba (unfortunately, Windows 7 complains 
+that "Your files are not protected", no idea how to fix that) and Mac OS 
+X Time Machine over AFP. For AFP instructions, check out 
+INSTALL.afp.md. We had some difficulties with setting up AFP, and to 
+get it working with Mac OS X Lion.</p>
+
+<p>We use newest Ubuntu LTS (as a time of writing, 12.04). Our servers run 
+on virtual machines under KVM. One of backup servers use disk rack 
+connected to PCI-E RAID controller (RAID5 + hot spare), other one is 
+Synology NAS device with RAID6 over iSCSI in separate network.</p>
+
+<p>Autentication is handled by single sign-on, so no manual user account
+management for this system is required at all.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/ojarva">ojarva</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
