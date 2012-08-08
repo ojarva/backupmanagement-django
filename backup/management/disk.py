@@ -1,13 +1,18 @@
 from django.conf import settings
+from django.core.cache import cache
+
 import json
 import os
 import pickle
 import subprocess
 import traceback
+import hashlib
+
+import cPickle as pickle
 
 from functools import wraps
 
-__ALL__ = ["Disk", "chpasswd"]
+__ALL__ = ["Disk", "chpasswd", "Filesystem", "Lvm"]
 
 def require_mounted(func):
     @wraps(func)
@@ -31,7 +36,7 @@ def require_disk(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if not self.exists():
-            raise Exception("Disk doesn't exist")
+            raise Exception("Disk doesn't exist %s" % self.exists())
         response = func(self, *args, **kwargs)
         return response
     return wrapper
@@ -45,6 +50,18 @@ def require_no_disk(func):
         return response
     return wrapper
 
+def cache_disk_func(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        cache_key = "%s-%s-%s" % (func.__name__, hashlib.md5(pickle.dumps(args)).hexdigest(), hashlib.md5(pickle.dumps(kwargs)).hexdigest())
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        response = func(self, *args, **kwargs)
+        cache.set(cache_key, response, 5)
+        return response
+    return wrapper
+
 
 def run_sudo(command, *args):
     """ Runs wrapped commands, returns (returncode, output) tuple """
@@ -54,6 +71,92 @@ def run_sudo(command, *args):
     p = subprocess.Popen(command, stdout=subprocess.PIPE)
     (stdout, _) = p.communicate()
     return (p.returncode, stdout)
+
+
+class Lvm:
+    def __init__(self, path):
+        self.path = path
+        self.data = {}
+        self.refresh()
+
+    def refresh(self):
+        """ Get data from vgdisplay:
+              1  volume group name
+              2  volume group access
+              3  volume group status
+              4  internal volume group number
+              5  maximum number of logical volumes
+              6  current number of logical volumes
+              7  open count of all logical volumes in this volume group
+              8  maximum logical volume size
+              9  maximum number of physical volumes
+              10 current number of physical volumes
+              11 actual number of physical volumes
+              12 size of volume group in kilobytes
+              13 physical extent size
+              14 total number of physical extents for this volume group
+              15 allocated number of physical extents for this volume group
+              16 free number of physical extents for this volume group
+              17 uuid of volume group
+
+ """
+        (code, raw_data) = run_sudo("vgdisplay")
+        if code != 0:
+            raise Exception("vgdisplay failed")
+        raw_data = raw_data.strip()
+        raw_data = raw_data.split(":")
+
+        fields = [
+            "name", "access", "status", "groupnumber", "max_lv_count",
+            "current_lv_count", "lv_open_count", "maximum_lvsize",
+            "max_pv_count", "current_pv_count", "actual_pv_count",
+            "vg_size_kb", "vg_extent_size", "vg_extent_count",
+            "vg_extent_allocated", "vg_extent_free", "uuid"]
+
+        data = {}
+        for c in range(0, len(fields)):
+            data[fields[c]] = raw_data[c]
+        self.data = data
+        return data
+
+    @property
+    def free(self):
+        """ Amount of free disk (GB) """
+        return float(self.data["vg_extent_size"]) * float(self.data["vg_extent_free"]) / 1024 / 1024
+
+    @property
+    def used(self):
+        """ Amount of used disk (GB) """
+        return float(self.data["vg_extent_size"]) * float(self.data["vg_extent_allocated"]) / 1024 / 1024
+
+    @property
+    def total(self):
+        """ Disk size (GB) """
+        return float(self.data["vg_size_kb"]) / 1024 / 1024
+
+class Filesystem:
+    def __init__(self, path):
+        self.path = path
+        self.statvfs = None
+        self.refresh()
+
+    def refresh(self):
+        self.statvfs = os.statvfs(self.path)
+
+    @property
+    def free(self):
+        """ Get amount of free space (GB) in filesystem """
+        return float(self.statvfs.f_bavail * self.statvfs.f_bsize) / 1024 / 1024 / 1024
+
+    @property
+    def used(self):
+        """ Get amount of used space (GB) in filesystem """
+        return float((self.statvfs.f_blocks - self.statvfs.f_bfree) * self.statvfs.f_frsize) / 1024 / 1024 / 1024
+
+    @property
+    def total(self):
+        """ Get amount of total space (GB) in filesystem """
+        return float(self.statvfs.f_blocks * self.statvfs.f_frsize) / 1024 / 1024 / 1024
 
 class Disk:
     """ Presents single disk """
@@ -88,6 +191,7 @@ class Disk:
 
     @require_mounted
     @require_disk
+    @cache_disk_func
     def fetch_backups(self):
         """ Get backup information with sudo, as backupmanagement user do not have direct access to user backup files """
         (returncode, output) = run_sudo("fetch_backups", self.username)
@@ -110,11 +214,12 @@ class Disk:
         return self._mounted
 
     @require_disk
+    @cache_disk_func
     def get_info(self):
         """ Load disk information. Depends on specific software version. Expect having this broken in different distributions. """
         (returncode, output) = run_sudo("lvdisplay", self.username)
         if returncode is 5:
-            raise Exception("No such disk (%s)" % self.get_lvm_root())
+            raise Exception("No such disk (%s)" % self.get_lvm_path())
         if returncode is None or returncode != 0:
             raise Exception('Invalid returncode from lvdisplay: %s' %returncode)
         output = output.split(":")
@@ -141,6 +246,7 @@ class Disk:
             self.usepercent = round((float(self.used)) / float(self.size) * 100, 2)
 
     @require_disk
+    @cache_disk_func
     def get_waittime(self):
         """ Get disk wait times from /proc/diskstats. Requires dmsetup for mapping dm numbers to usernames """
         f = open("/proc/diskstats", "r")

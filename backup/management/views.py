@@ -1,15 +1,16 @@
 from decorators import *
 from django.views.decorators.csrf import csrf_protect
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST, condition, require_GET
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.urlresolvers import reverse_lazy
+from django.views.decorators.http import require_POST, condition, require_GET
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render_to_response
 from forms import AddForm, DeleteForm
-from disk import Disk, chpasswd
+from disk import Disk, chpasswd, Lvm, Filesystem
 import os
 import pickle
 import subprocess
@@ -23,10 +24,15 @@ def adminview(request):
     """ Admin list view of users and disk usages """
     username = request.user.username
     users_list = []
+    lvm = Lvm(settings.LVM_ROOT)
     for userdetail in User.objects.all():
-         disk = __get_diskinfo(userdetail.username)
+         disk = Disk(userdetail.username)
+         try:
+             disk.get_info()
+         except:
+             continue
          users_list.append((userdetail.username, disk))
-    return {"users": users_list}
+    return {"users": users_list, "lvm": lvm}
 
 @login_required
 @require_GET
