@@ -36,10 +36,18 @@
 
 <div class="row" style="padding-top:2em">
 	<div class="span4 offset8">
+{% if disk_full %}
+		<div class="alert alert-block alert-error">
+			<h4 class="alert-heading">No disk space available!</h4>
+			Unfortunately, not enough disk space is available - can't create new disk. Please contact IT team.
+		</div>
+{% else %}
+
 		<p>This operation takes some time (&gt;10s). Please be patient and wait.</p>
 		<form method="post" action="?">
 			{% csrf_token %} <input type="submit" class="btn btn-primary btn-large" value="Create">
 		</form>
+{% endif %}
 	</div>
 </div>
 

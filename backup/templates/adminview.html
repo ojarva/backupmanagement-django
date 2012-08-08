@@ -2,7 +2,17 @@
 
 {% block content %}
 
+<div class="page_header">
 <h1>Status</h1>
+</div>
+
+<h2>LVM status</h2>
+
+<div class="progress">
+	<div class="bar" style="width: {% widthratio lvm.used lvm.total 100 %}%"></div>
+</div>
+
+<h2>User disks</h2>
 
 <table class="table table-striped table-condensed">
 <thead>

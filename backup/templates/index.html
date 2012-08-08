@@ -67,7 +67,7 @@ Disk size: <span class="badge">Disk size: {{disk.size|filesizeformat}}</span> - 
 <div class="row">
 
 <div class="span3">
-	 I don't remember my password. Doesn't affect old backups in any way.
+	 <b><i class="icon-exclamation-sign"></i> This service uses separate password. Create it here.</b> This doesn't affect old backups in any way.
 	<br>
 	<a class="btn btn-primary btn-small" href="{% url change_password %}">Generate new password</a>
 </div>
@@ -105,7 +105,7 @@ Disk size: <span class="badge">Disk size: {{disk.size|filesizeformat}}</span> - 
 <div class="span3">
 <h4>Mac OS X</h4>
 <p>Time Machine works fine - just remember to convert away from Legacy FileVault (before Lion).</p>
-<p><b>afp://{{ hostname }}\{{user.username}}</b></p>
+<p><b>afp://{{ hostname }}/{{user.username}}</b></p>
 </div>
 
 <div class="span3">
