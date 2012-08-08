@@ -91,6 +91,14 @@ TEMPLATE_LOADERS = (
 #     'django.template.loaders.eggs.Loader',
 )
 
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake'
+    }
+}
+
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -163,9 +171,9 @@ except:
 AUTOMATIC_USER_MANAGEMENT=True
 
 # Default disk size, in gigabytes
-DEFAULT_DISK_SIZE=150
+DEFAULT_DISK_SIZE=250
 # In gigabytes
-DEFAULT_ADD_SPACE_AMOUNT=25
+DEFAULT_ADD_SPACE_AMOUNT=50
 
 # Path for sudo wrappers
 WRAPPERS_PATH="/opt/backupmanagement/wrappers"
